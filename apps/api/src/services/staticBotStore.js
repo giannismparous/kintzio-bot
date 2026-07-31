@@ -1,7 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 let bundle = null;
+const repositoryRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../..'
+);
 
 function vectorNorm(values) {
   let sum = 0;
@@ -10,7 +15,9 @@ function vectorNorm(values) {
 }
 
 export async function initStaticBotStore(bundlePath) {
-  const absolute = path.resolve(process.cwd(), bundlePath);
+  const absolute = path.isAbsolute(bundlePath)
+    ? bundlePath
+    : path.resolve(repositoryRoot, bundlePath);
   const parsed = JSON.parse(await fs.readFile(absolute, 'utf8'));
   if (!parsed?.bot?.id || !Array.isArray(parsed.chunks) || !parsed.chunks.length) {
     throw new Error(`Invalid static bot bundle: ${absolute}`);
