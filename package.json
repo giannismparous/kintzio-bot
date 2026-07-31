@@ -14,7 +14,7 @@
     "seed": "node scripts/seed-konstantinos.mjs",
     "seed:build": "node scripts/seed-konstantinos.mjs --build",
     "seed:verify": "node scripts/seed-konstantinos.mjs --build --chat",
-    "start:render": "node scripts/start-render.mjs",
+    "bundle:export": "node scripts/export-static-bundle.mjs",
     "check:online": "node scripts/check-online-env.mjs",
     "build": "npm run build -w @kintzio/core && npm run build -w @kintzio/chat-widget && npm run build -w @kintzio/api && npm run build -w @kintzio/web"
   },

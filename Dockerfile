@@ -22,6 +22,7 @@ RUN npm run build -w @kintzio/web \
 
 ENV NODE_ENV=production
 ENV DISABLE_BROWSER_RENDER=true
+ENV STATIC_BOT_BUNDLE=data/kintzio-bundle.json
 EXPOSE 10000
 
-CMD ["npm", "run", "start:render"]
+CMD ["npm", "run", "start", "-w", "@kintzio/api"]

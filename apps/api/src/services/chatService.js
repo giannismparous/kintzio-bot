@@ -5,6 +5,11 @@ import {
 } from '@kintzio/core';
 import { pool, vectorStore, getEmbedder, getChatModel } from '../config.js';
 import { buildChatSources } from './sourceCitations.js';
+import {
+  getStaticBot,
+  searchStaticBot,
+  staticBotIsReady,
+} from './staticBotStore.js';
 
 function parseJsonArray(value) {
   if (Array.isArray(value)) return value;
@@ -97,8 +102,13 @@ export async function answerBotChat(botId, question, { history = [], language } 
     return { answer: safeRedirect(replyLanguage), sources: [], confidence: 0 };
   }
 
-  const { rows } = await pool.query('SELECT * FROM bots WHERE id = $1', [botId]);
-  const bot = rows[0];
+  let bot;
+  if (staticBotIsReady()) {
+    bot = getStaticBot(botId);
+  } else {
+    const { rows } = await pool.query('SELECT * FROM bots WHERE id = $1', [botId]);
+    bot = rows[0];
+  }
   if (!bot) {
     const err = new Error('Bot not found');
     err.statusCode = 404;
@@ -123,7 +133,9 @@ export async function answerBotChat(botId, question, { history = [], language } 
   if (bot.status === 'ready') {
     const embedder = getEmbedder();
     const queryEmbedding = await embedder.embedQuery(q);
-    hits = await vectorStore.similaritySearch(botId, queryEmbedding, 6);
+    hits = staticBotIsReady()
+      ? searchStaticBot(botId, queryEmbedding, 6)
+      : await vectorStore.similaritySearch(botId, queryEmbedding, 6);
     if (hits[0] && (hits[0].score ?? 0) < 0.25) {
       hits = [];
     }

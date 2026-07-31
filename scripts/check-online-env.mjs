@@ -25,17 +25,10 @@ function loadEnvFile(file) {
 }
 
 const env = { ...loadEnvFile(examplePath), ...loadEnvFile(envPath) };
-const authMode = (env.AUTH_MODE || 'dev').toLowerCase();
-const storageMode = (env.STORAGE_MODE || 'local').toLowerCase();
-const isOnline = env.NODE_ENV === 'production' || Boolean(env.KINTZIO_DATA_DIR);
+const isOnline = env.NODE_ENV === 'production' || Boolean(env.STATIC_BOT_BUNDLE);
 
 const required = ['GEMINI_API_KEY'];
-const onlineRequired = [
-  'DATABASE_URL',
-  'UPLOAD_DIR',
-  'KINTZIO_DATA_DIR',
-  'ADMIN_API_KEY',
-];
+const onlineRequired = ['STATIC_BOT_BUNDLE'];
 
 let ok = true;
 
@@ -49,7 +42,7 @@ function need(key) {
   console.log(`✓ ${key}`);
 }
 
-console.log(`\nKintzio online check (AUTH_MODE=${authMode}, STORAGE_MODE=${storageMode})\n`);
+console.log('\nKintzio online check\n');
 
 for (const key of required) need(key);
 
@@ -57,18 +50,12 @@ if (isOnline) {
   console.log('\nSingle-service Render deploy:');
   for (const key of onlineRequired) need(key);
 
-  if (!env.DATABASE_URL?.startsWith('pglite:/var/data/')) {
-    console.log('✗ DATABASE_URL — production PGlite must live under /var/data');
+  const bundlePath = path.resolve(root, env.STATIC_BOT_BUNDLE || '');
+  if (!env.STATIC_BOT_BUNDLE || !fs.existsSync(bundlePath)) {
+    console.log('✗ STATIC_BOT_BUNDLE — bundle file does not exist');
     ok = false;
   } else {
-    console.log('✓ DATABASE_URL uses the persistent disk');
-  }
-
-  if (!String(env.UPLOAD_DIR || '').startsWith('/var/data/')) {
-    console.log('✗ UPLOAD_DIR — production uploads must live under /var/data');
-    ok = false;
-  } else {
-    console.log('✓ UPLOAD_DIR uses the persistent disk');
+    console.log('✓ static bot bundle exists');
   }
 } else {
   console.log('\nLocal dev mode — online vars optional.');

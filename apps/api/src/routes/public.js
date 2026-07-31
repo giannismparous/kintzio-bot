@@ -1,6 +1,7 @@
 import { pool, env } from '../config.js';
 import { mapBot } from '../services/auth.js';
 import { answerBotChat } from '../services/chatService.js';
+import { getStaticBot, staticBotIsReady } from '../services/staticBotStore.js';
 
 const CHAT_WINDOW_MS = 60_000;
 const CHAT_REQUEST_LIMIT = 20;
@@ -23,16 +24,24 @@ function consumeChatRequest(ip) {
 
 export default async function publicRoutes(fastify) {
   fastify.get('/public/bots/:botId/config', async (request, reply) => {
-    const { rows } = await pool.query('SELECT * FROM bots WHERE id = $1', [
-      request.params.botId,
-    ]);
-    if (!rows[0]) return reply.code(404).send({ error: 'not_found' });
-    const bot = mapBot(rows[0]);
+    let row;
+    if (staticBotIsReady()) {
+      row = getStaticBot(request.params.botId);
+    } else {
+      const result = await pool.query('SELECT * FROM bots WHERE id = $1', [
+        request.params.botId,
+      ]);
+      row = result.rows[0];
+    }
+    if (!row) return reply.code(404).send({ error: 'not_found' });
+    const bot = mapBot(row);
     return {
       id: bot.id,
       name: bot.name,
       theme: bot.theme,
-      iconUrl: bot.iconUrl,
+      iconUrl: staticBotIsReady()
+        ? `${env.publicApiUrl}/assets/chatbot-avatar.png`
+        : bot.iconUrl,
       welcomeMessage: bot.welcomeMessage,
       suggestedQuestions: bot.suggestedQuestions,
       status: bot.status,

@@ -7,9 +7,8 @@ import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import { env, initDb, closeDb, pool } from './config.js';
 import { closeBrowser } from '@kintzio/core';
-import authRoutes from './routes/auth.js';
-import botRoutes from './routes/bots.js';
 import publicRoutes from './routes/public.js';
+import { initStaticBotStore } from './services/staticBotStore.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const webDistDir = path.resolve(__dirname, '../../web/dist');
@@ -19,7 +18,12 @@ const app = Fastify({
   bodyLimit: 25 * 1024 * 1024,
 });
 
-await initDb();
+const staticMode = Boolean(env.staticBotBundle);
+if (staticMode) {
+  await initStaticBotStore(env.staticBotBundle);
+} else {
+  await initDb();
+}
 
 const corsOptions =
   env.authMode === 'dev'
@@ -50,9 +54,11 @@ const corsOptions =
 
 await app.register(cors, corsOptions);
 
-await app.register(multipart, {
-  limits: { fileSize: 25 * 1024 * 1024 },
-});
+if (!staticMode) {
+  await app.register(multipart, {
+    limits: { fileSize: 25 * 1024 * 1024 },
+  });
+}
 
 app.addHook('onRequest', async (request, reply) => {
   if (process.env.NODE_ENV !== 'production') return;
@@ -70,7 +76,7 @@ app.addHook('onRequest', async (request, reply) => {
   }
 });
 
-if (env.storageMode === 'local') {
+if (!staticMode && env.storageMode === 'local') {
   await app.register(fastifyStatic, {
     root: env.uploadDir,
     prefix: '/files/',
@@ -80,12 +86,19 @@ if (env.storageMode === 'local') {
 
 app.get('/health', async () => ({
   ok: true,
+  mode: staticMode ? 'static-bundle' : 'database',
   authMode: env.authMode,
   storageMode: env.storageMode,
 }));
 
-await app.register(authRoutes);
-await app.register(botRoutes);
+if (!staticMode) {
+  const [{ default: authRoutes }, { default: botRoutes }] = await Promise.all([
+    import('./routes/auth.js'),
+    import('./routes/bots.js'),
+  ]);
+  await app.register(authRoutes);
+  await app.register(botRoutes);
+}
 await app.register(publicRoutes);
 
 if (fs.existsSync(path.join(webDistDir, 'index.html'))) {
@@ -105,12 +118,14 @@ if (fs.existsSync(path.join(webDistDir, 'index.html'))) {
   });
 }
 
-try {
-  await pool.query('SELECT 1');
-} catch (err) {
-  app.log.error('Database not reachable.');
-  app.log.error(err.message);
-  process.exit(1);
+if (!staticMode) {
+  try {
+    await pool.query('SELECT 1');
+  } catch (err) {
+    app.log.error('Database not reachable.');
+    app.log.error(err.message);
+    process.exit(1);
+  }
 }
 
 await app.listen({ port: env.apiPort, host: env.apiHost });
@@ -119,7 +134,7 @@ console.log(`Kintzio API on http://localhost:${env.apiPort} (${env.authMode})`);
 async function shutdown() {
   await closeBrowser().catch(() => {});
   await app.close().catch(() => {});
-  await closeDb().catch(() => {});
+  if (!staticMode) await closeDb().catch(() => {});
   process.exit(0);
 }
 process.on('SIGINT', shutdown);

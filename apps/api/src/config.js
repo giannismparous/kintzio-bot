@@ -11,7 +11,6 @@ import {
   SimpleUrlFetcher,
   PgVectorStore,
 } from '@kintzio/core';
-import { createPool } from './db/pool.js';
 import { runMigrations } from './db/runMigrations.js';
 import { recoverStaleBuildJobs } from './db/recoverStaleJobs.js';
 
@@ -31,6 +30,7 @@ export const env = {
   geminiChatModel: process.env.GEMINI_CHAT_MODEL || 'gemini-flash-lite-latest',
   geminiEmbedDims: Number(process.env.GEMINI_EMBED_DIMS || 768),
   databaseUrl: process.env.DATABASE_URL || 'pglite:./data/pglite',
+  staticBotBundle: process.env.STATIC_BOT_BUNDLE || '',
   apiPort: Number(process.env.PORT || process.env.API_PORT || 8787),
   apiHost: process.env.API_HOST || '0.0.0.0',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
@@ -82,6 +82,7 @@ function createObjectStore() {
 }
 
 export async function initDb() {
+  const { createPool } = await import('./db/pool.js');
   pool = await createPool(env.databaseUrl);
   await runMigrations(pool, { log: (msg) => console.log(msg) });
   await recoverStaleBuildJobs(pool);
