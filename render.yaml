@@ -26,6 +26,8 @@ services:
         value: /var/data
       - key: KINTZIO_SEED_VERSION
         value: v1
+      - key: DISABLE_BROWSER_RENDER
+        value: "true"
       - key: GEMINI_EMBED_MODEL
         value: gemini-embedding-001
       - key: GEMINI_CHAT_MODEL

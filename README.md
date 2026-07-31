@@ -22,7 +22,6 @@ cp .env.example .env
 # set GEMINI_API_KEY=...
 
 npm install
-npx playwright install chromium   # once — needed for React/JS website scraping
 npm run db:migrate
 npm run seed
 npm run dev
@@ -66,6 +65,10 @@ Default `DATABASE_URL=pglite:./data/pglite` needs no Docker.
 The included `render.yaml` creates one Docker web service and a 1 GB persistent
 disk. Fastify serves both the built React app and the API, so Netlify and
 Supabase are not required.
+
+Production uses lightweight static HTML ingestion for the seven configured
+WordPress pages. Chromium is intentionally disabled to keep the 512 MB Starter
+instance and Docker image small.
 
 1. Push this repository to GitHub.
 2. In Render, choose **New → Blueprint** and select the repository.

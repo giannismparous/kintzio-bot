@@ -41,6 +41,9 @@ function launchOptions() {
 }
 
 export async function getBrowser() {
+  if (/^(1|true|yes)$/i.test(String(process.env.DISABLE_BROWSER_RENDER || ''))) {
+    throw new Error('JavaScript browser rendering is disabled in this deployment');
+  }
   if (browserInstance) return browserInstance;
   const { chromium } = await loadPlaywright();
   try {

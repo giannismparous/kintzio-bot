@@ -3,6 +3,9 @@ import { normalizeUrl } from '../domain/text.js';
 import { BrowserRenderSession } from './browserRender.js';
 
 const DEFAULT_MAX_PAGES = 40;
+const BROWSER_RENDER_DISABLED = /^(1|true|yes)$/i.test(
+  String(process.env.DISABLE_BROWSER_RENDER || '')
+);
 
 function sameHost(a, b) {
   try {
@@ -121,6 +124,12 @@ export class SimpleUrlFetcher {
     if (!staticResult.needsBrowser) {
       return staticResult;
     }
+    if (BROWSER_RENDER_DISABLED) {
+      if (staticResult.text && staticResult.text.length >= 40) {
+        return { ...staticResult, needsBrowser: false, rendered: false };
+      }
+      throw new Error('This page requires JavaScript rendering, which is disabled');
+    }
 
     const session = new BrowserRenderSession();
     try {
@@ -237,8 +246,15 @@ export class SimpleUrlFetcher {
           } else {
             fetched = await this.fetchTextStatic(next);
             if (fetched.needsBrowser) {
-              useBrowser = true;
-              fetched = await this.fetchTextWithSession(next, browserSession);
+              if (BROWSER_RENDER_DISABLED) {
+                if (!fetched.text || fetched.text.length < 40) {
+                  throw new Error('This page requires JavaScript rendering, which is disabled');
+                }
+                fetched = { ...fetched, needsBrowser: false, rendered: false };
+              } else {
+                useBrowser = true;
+                fetched = await this.fetchTextWithSession(next, browserSession);
+              }
             }
           }
 
