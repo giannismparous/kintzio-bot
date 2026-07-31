@@ -1,0 +1,2 @@
+ALTER TABLE bots
+  ADD COLUMN IF NOT EXISTS key_facts JSONB NOT NULL DEFAULT '[]'::jsonb;

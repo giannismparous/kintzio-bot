@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: kintzio-db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: kintzio
+      POSTGRES_PASSWORD: kintzio
+      POSTGRES_DB: kintzio
+    volumes:
+      - kintzio_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kintzio -d kintzio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  kintzio_pgdata:

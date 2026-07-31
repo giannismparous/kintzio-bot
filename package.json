@@ -1,0 +1,27 @@
+{
+  "name": "kintzio",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @kintzio/api\" \"npm run dev -w @kintzio/web\"",
+    "dev:api": "npm run dev -w @kintzio/api",
+    "dev:web": "npm run dev -w @kintzio/web",
+    "db:migrate": "npm run db:migrate -w @kintzio/api",
+    "seed": "node scripts/seed-konstantinos.mjs",
+    "seed:build": "node scripts/seed-konstantinos.mjs --build",
+    "seed:verify": "node scripts/seed-konstantinos.mjs --build --chat",
+    "start:render": "node scripts/start-render.mjs",
+    "check:online": "node scripts/check-online-env.mjs",
+    "build": "npm run build -w @kintzio/core && npm run build -w @kintzio/chat-widget && npm run build -w @kintzio/api && npm run build -w @kintzio/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
+  }
+}

@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+!.env.online.example
+node_modules
+**/node_modules
+**/dist
+data/pglite
+data/pglite.*
+data/uploads/*
+!data/uploads/.gitkeep
+test-results
+*.log
+.DS_Store

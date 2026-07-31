@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.env
+.env.online
+.DS_Store
+data/uploads/**
+!data/uploads/.gitkeep
+*.log
+.vite/
+coverage/
+test-results/
+data/pglite/
+data/pglite.*/
+data/pglite.*

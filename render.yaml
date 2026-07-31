@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: kintzio-bot
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    disk:
+      name: kintzio-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AUTH_MODE
+        value: dev
+      - key: STORAGE_MODE
+        value: local
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: DATABASE_URL
+        value: pglite:/var/data/pglite
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: KINTZIO_DATA_DIR
+        value: /var/data
+      - key: KINTZIO_SEED_VERSION
+        value: v1
+      - key: GEMINI_EMBED_MODEL
+        value: gemini-embedding-001
+      - key: GEMINI_CHAT_MODEL
+        value: gemini-flash-lite-latest
+      - key: GEMINI_EMBED_DIMS
+        value: "768"
+      - key: ADMIN_API_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false

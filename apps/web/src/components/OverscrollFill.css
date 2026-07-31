@@ -1,0 +1,18 @@
+.overscroll-fill {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.overscroll-fill--top {
+  top: -100vh;
+  background: var(--bg, #f3efe6);
+}
+
+.overscroll-fill--bottom {
+  bottom: -100vh;
+  background: var(--bg-2, #ebe4d6);
+}
