@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<!--
+  Team dashboard: leads, unanswered questions, internal transcript search.
+  Reached only through require_internal_user (fail-closed). The fit score and
+  fit notes are shown here and nowhere else — they exist to sort his inbox, not
+  to grade prospects to their face.
+-->
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin — {{ org_name }}</title>
+<style>
+  body{margin:0;font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       color:#070f45;background:#f5f6f8}
+  header{background:#070f45;color:#fff;padding:13px 22px;display:flex;align-items:center;gap:16px}
+  header b{letter-spacing:-.2px}
+  header .who{margin-left:auto;font-size:12.5px;opacity:.65}
+  .tabs{display:flex;gap:2px;background:#fff;border-bottom:1px solid #e4e7eb;padding:0 22px}
+  .tabs button{border:0;background:none;padding:12px 16px;cursor:pointer;font:inherit;font-size:14px;
+               color:#5b6470;border-bottom:2px solid transparent}
+  .tabs button.on{color:#070f45;border-bottom-color:#ff7d00;font-weight:600}
+  .wrap{padding:22px}
+  .card{background:#fff;border:1px solid #e4e7eb;border-radius:10px;padding:16px 18px;margin-bottom:16px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px}
+  th,td{border-bottom:1px solid #eceef1;padding:8px 9px;text-align:left;vertical-align:top}
+  th{background:#fafbfc;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#5b6470}
+  .fit{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600}
+  .fit.hi{background:#e6f4ea;color:#1e6b34} .fit.mid{background:#fff4e0;color:#8a5a12}
+  .fit.lo{background:#fdeaea;color:#8f2222}
+  .flow{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:#5b6470}
+  .tag{background:#f2f3f5;border-radius:4px;padding:1px 6px;font-size:11.5px;margin-right:4px}
+  input[type=text]{padding:9px 12px;border:1px solid #e4e7eb;border-radius:8px;font:inherit;width:340px}
+  button.go{background:#070f45;color:#fff;border:0;border-radius:8px;padding:9px 16px;cursor:pointer;font-weight:600}
+  .uncleared{background:#fdeaea;color:#8f2222;font-size:11px;padding:1px 6px;border-radius:4px}
+  .muted{color:#5b6470;font-size:13px}
+  .stat{display:inline-block;margin-right:26px}
+  .stat b{display:block;font-size:22px;letter-spacing:-.4px}
+  .stat span{font-size:12px;color:#5b6470;text-transform:uppercase;letter-spacing:.05em}
+</style>
+</head>
+<body>
+<header><b>{{ org_name }}</b> <span style="opacity:.5">— DialogosAI admin</span>
+  <span class="who">{{ user }}</span></header>
+<div class="tabs">
+  <button id="tb-leads" class="on" onclick="show('leads')">Leads</button>
+  <button id="tb-unans" onclick="show('unans')">Αναπάντητα</button>
+  <button id="tb-search" onclick="show('search')">Internal search</button>
+  <button id="tb-stats" onclick="show('stats')">Stats</button>
+</div>
+<div class="wrap">
+  <div id="p-leads"><div class="card"><div id="leads">…</div></div></div>
+  <div id="p-unans" style="display:none"><div class="card">
+    <div class="muted">Ερωτήσεις που το corpus δεν κάλυψε — ταξινομημένες κατά συχνότητα.
+      Αυτό είναι το content pipeline: κάθε γραμμή είναι υποψήφιο θέμα για επεισόδιο,
+      keynote pillar ή module.</div>
+    <div id="unans" style="margin-top:12px">…</div></div></div>
+  <div id="p-search" style="display:none"><div class="card">
+    <input type="text" id="sq" placeholder="π.χ. προάγουν τον καλύτερο τεχνικό σε manager">
+    <button class="go" onclick="doSearch()">Search</button>
+    <label class="muted" style="margin-left:14px">
+      <input type="checkbox" id="inc" checked> include non-rights-cleared</label>
+    <div id="sres" style="margin-top:14px"></div></div></div>
+  <div id="p-stats" style="display:none"><div class="card"><div id="stats">…</div></div></div>
+</div>
+<script>
+const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function show(p){
+  ["leads","unans","search","stats"].forEach(k => {
+    document.getElementById("p-"+k).style.display = k === p ? "" : "none";
+    document.getElementById("tb-"+k).className = k === p ? "on" : "";
+  });
+}
+function fitClass(v){ return v >= .65 ? "hi" : v >= .4 ? "mid" : "lo"; }
+
+async function loadLeads(){
+  const d = await (await fetch("/api/leads/admin/list")).json();
+  if (!d.leads || !d.leads.length){
+    document.getElementById("leads").innerHTML = '<div class="muted">Κανένα lead ακόμη.</div>';
+    return;
+  }
+  document.getElementById("leads").innerHTML =
+    `<div class="muted" style="margin-bottom:10px">${d.count} leads · retention ${d.retention_days} ημέρες</div>` +
+    `<table><tr><th>Fit</th><th>Flow</th><th>Επικοινωνία</th><th>Qualification</th><th>Λήγει</th></tr>` +
+    d.leads.map(l => `<tr>
+      <td><span class="fit ${fitClass(l.fit_score)}">${(l.fit_score ?? 0).toFixed(2)}</span><br>
+        ${(l.fit_notes?.negative || []).map(n => `<span class="tag">−${esc(n)}</span>`).join("")}
+        ${(l.fit_notes?.positive || []).map(n => `<span class="tag">+${esc(n)}</span>`).join("")}</td>
+      <td class="flow">${esc(l.flow)}<br><span class="muted">${esc(l.lang)}</span></td>
+      <td><b>${esc(l.name)}</b><br>${esc(l.email)}<br>${esc(l.phone || "")}<br>
+        <span class="muted">${esc(l.organisation || "")}</span></td>
+      <td>${esc(l.summary || "")}</td>
+      <td class="muted">${esc((l.expires_at || "").slice(0,10))}</td></tr>`).join("") + `</table>`;
+}
+async function loadUnans(){
+  const d = await (await fetch("/api/internal/unanswered")).json();
+  document.getElementById("unans").innerHTML = !d.questions?.length
+    ? '<div class="muted">Καμία αναπάντητη ερώτηση.</div>'
+    : `<table><tr><th>#</th><th>Ερώτηση</th><th>Γλώσσα</th><th>Τελευταία</th></tr>` +
+      d.questions.map(q => `<tr><td><b>${q.times_asked}</b></td><td>${esc(q.question)}</td>
+        <td class="muted">${esc(q.lang)}</td><td class="muted">${esc((q.last_seen||"").slice(0,16))}</td></tr>`).join("") + `</table>`;
+}
+async function doSearch(){
+  const q = document.getElementById("sq").value.trim();
+  if (!q) return;
+  const inc = document.getElementById("inc").checked;
+  const d = await (await fetch(`/api/internal/search?q=${encodeURIComponent(q)}&include_uncleared=${inc}`)).json();
+  document.getElementById("sres").innerHTML = !d.results?.length
+    ? '<div class="muted">Καμία εγγραφή.</div>'
+    : `<div class="muted" style="margin-bottom:8px">${d.count} αποτελέσματα</div>` +
+      d.results.map(r => `<div style="border-bottom:1px solid #eceef1;padding:10px 0">
+        <div class="muted"><b>${esc(r.speaker || "—")}</b>
+          ${r.episode ? "· ep " + esc(r.episode) : ""} ${r.timestamp ? "@ " + esc(r.timestamp) : ""}
+          · ${esc(r.source_type)} · ${esc(r.lang)} · ${r.score}
+          ${r.rights_cleared ? "" : '<span class="uncleared">NOT CLEARED</span>'}</div>
+        <div>${esc(r.content)}</div>
+        ${r.url ? `<a href="${esc(r.url)}" target="_blank" class="muted">${esc(r.title)}</a>` : `<span class="muted">${esc(r.title)}</span>`}
+      </div>`).join("");
+}
+async function loadStats(){
+  const d = await (await fetch("/api/internal/stats")).json();
+  const ix = d.index || {};
+  document.getElementById("stats").innerHTML =
+    `<div style="margin-bottom:18px">
+      <div class="stat"><b>${ix.chunks ?? 0}</b><span>chunks</span></div>
+      <div class="stat"><b>${ix.persona_eligible ?? 0}</b><span>persona-eligible</span></div>
+      <div class="stat"><b>${ix.internal_only ?? 0}</b><span>internal only</span></div>
+      <div class="stat"><b>${d.leads_total ?? 0}</b><span>leads</span></div>
+      <div class="stat"><b>${d.unanswered_total ?? 0}</b><span>unanswered</span></div>
+     </div>
+     <table><tr><th>Ανά γλώσσα</th><th>Ανά τύπο</th><th>Leads ανά flow</th></tr><tr>
+      <td>${Object.entries(ix.by_lang || {}).map(([k,v]) => `${esc(k)}: ${v}`).join("<br>")}</td>
+      <td>${Object.entries(ix.by_source_type || {}).map(([k,v]) => `${esc(k)}: ${v}`).join("<br>")}</td>
+      <td>${Object.entries(d.leads_by_flow || {}).map(([k,v]) => `${esc(k)}: ${v}`).join("<br>") || "—"}</td>
+     </tr></table>`;
+}
+document.getElementById("sq").addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+loadLeads(); loadUnans(); loadStats();
+</script>
+</body>
+</html>

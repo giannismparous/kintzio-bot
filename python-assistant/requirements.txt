@@ -1,0 +1,32 @@
+# DialogosAI — Kintzios. Trimmed from the BPAN requirements: no reportlab
+# (no PDF story generation), no OCR, no TTS/voice, no PDF text extraction.
+fastapi>=0.110
+uvicorn[standard]>=0.27
+jinja2>=3.1
+python-multipart>=0.0.9
+python-dotenv>=1.0
+sqlalchemy>=2.0
+# `[email]` is load-bearing, not decorative: `EmailStr` on the lead and erasure
+# models raises at import time without `email-validator`, and it is an optional
+# extra of pydantic rather than a hard dependency. This was missed on the first
+# pass because the dev environment had the package transitively — a clean-venv
+# install is the only thing that catches this class of omission, so
+# `tests/test_requirements.py` now asserts the extra is declared here.
+pydantic[email]>=2.6
+
+# Retrieval
+scikit-learn>=1.4          # TF-IDF leg (keyless — always available)
+numpy>=1.26
+faiss-cpu>=1.8            # semantic leg (needs GEMINI_API_KEY to populate)
+
+# LLM + embeddings
+google-generativeai>=0.5
+
+# Corpus ingest
+pyyaml>=6.0               # transcript / document frontmatter
+requests>=2.31
+beautifulsoup4>=4.12      # site re-crawl
+
+# Tests
+pytest>=8.0
+httpx>=0.27               # fastapi TestClient transport

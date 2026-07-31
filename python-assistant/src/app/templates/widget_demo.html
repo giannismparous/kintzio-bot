@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<!-- Bare page proving the widget drops into any site with two script tags.
+     This is what his web team will paste into WordPress. -->
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Widget embed demo — {{ org_name }}</title>
+<style>
+  body{margin:0;font:16px/1.7 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#14171a}
+  .hero{background:#14171a;color:#fff;padding:60px 22px}
+  .hero div{max-width:760px;margin:0 auto}
+  h1{font-size:30px;letter-spacing:-.5px;margin:0 0 8px}
+  .wrap{max-width:760px;margin:0 auto;padding:34px 22px 90px}
+  pre{background:#f5f6f8;border:1px solid #e4e7eb;border-radius:9px;padding:14px;
+      overflow-x:auto;font-size:13px;line-height:1.5}
+  h2{font-size:18px;margin-top:34px}
+  .muted{color:#5b6470;font-size:14.5px}
+  #inline-host{border:1px dashed #cfd4da;border-radius:12px;padding:10px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="hero"><div>
+  <h1>Your character eats others' talent for breakfast.</h1>
+  <p class="muted" style="color:#b9bfc6">Placeholder page standing in for kkintzios.com,
+    so the widget can be seen in the context it will actually live in.</p>
+</div></div>
+<div class="wrap">
+  <h2>Bubble mode (bottom-right — look there now)</h2>
+  <p class="muted">One tag. Nothing else on the page changes.</p>
+  <pre>&lt;script src="https://YOUR-DEPLOY-URL/static/kintzios-widget.js" defer&gt;&lt;/script&gt;</pre>
+
+  <h2>Inline mode</h2>
+  <p class="muted">For embedding inside a services or contact page section.</p>
+  <pre>&lt;div id="kintzios-assistant"&gt;&lt;/div&gt;
+&lt;script&gt;window.KINTZIOS_WIDGET_CONFIG = { mode: "inline", mount: "#kintzios-assistant" };&lt;/script&gt;
+&lt;script src="https://YOUR-DEPLOY-URL/static/kintzios-widget.js" defer&gt;&lt;/script&gt;</pre>
+  <div id="inline-host"></div>
+</div>
+
+<!-- bubble instance -->
+<script src="/static/kintzios-widget.js" defer></script>
+<!-- second (inline) instance: the widget is single-load by design, so the demo
+     mounts the inline example in an iframe rather than defeating that guard. -->
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  var f = document.createElement("iframe");
+  f.style.cssText = "width:100%;height:580px;border:0;border-radius:9px";
+  f.srcdoc = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0">'
+    + '<div id="kintzios-assistant"></div>'
+    + '<script>window.KINTZIOS_WIDGET_CONFIG={mode:"inline",mount:"#kintzios-assistant",'
+    + 'apiBase:"' + location.origin + '"};<\/script>'
+    + '<script src="' + location.origin + '/static/kintzios-widget.js"><\/script>'
+    + '</body></html>';
+  document.getElementById("inline-host").appendChild(f);
+});
+</script>
+</body>
+</html>

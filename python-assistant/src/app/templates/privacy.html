@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<!--
+  Assistant-specific privacy notice.
+
+  This is NOT a copy of the kkintzios.com policy and must not be replaced by a
+  link to it. That notice covers form-based contact only, says comments are
+  "retained indefinitely", and does not mention AI processing, conversation
+  logging, or a retention clock. Running an AI assistant that stores leads under
+  that notice would misrepresent the processing. ARCHITECTURE_NOTES.md §8 flags
+  the site notice as needing an update before launch; this page documents what
+  the app actually does in the meantime.
+-->
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Πολιτική Απορρήτου — {{ org_name }} AI Assistant</title>
+<style>
+  body{margin:0;font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       color:#070f45;background:#fbfbfc}
+  .wrap{max-width:760px;margin:0 auto;padding:40px 22px 80px}
+  h1{font-size:26px;letter-spacing:-.3px;margin-bottom:4px}
+  h2{font-size:17px;margin-top:34px;border-bottom:1px solid #e4e7eb;padding-bottom:6px}
+  .sub{color:#5b6470;font-size:14px;margin-bottom:26px}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;margin:12px 0}
+  th,td{border:1px solid #e4e7eb;padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#f5f6f8;font-weight:600}
+  code{background:#f2f3f5;padding:1px 5px;border-radius:4px;font-size:13px}
+  .lang{display:flex;gap:10px;margin-bottom:22px}
+  .lang button{border:1px solid #e4e7eb;background:#fff;border-radius:999px;padding:5px 14px;
+               cursor:pointer;font-size:13px;font-weight:600;color:#5b6470}
+  .lang button.on{border-color:#ff7d00;color:#a8873f}
+  .box{background:#fff8ec;border:1px solid #e8d5a8;border-radius:9px;padding:13px 16px;font-size:14.5px}
+  a{color:#a8873f}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="lang">
+    <button id="b-el" class="on" onclick="setLang('el')">Ελληνικά</button>
+    <button id="b-en" onclick="setLang('en')">English</button>
+  </div>
+
+  <!-- ===== EL ===== -->
+  <section id="el">
+    <h1>Πολιτική Απορρήτου — AI Assistant</h1>
+    <div class="sub">Αφορά αποκλειστικά τον ψηφιακό βοηθό. Για τον ιστότοπο ισχύει η
+      <a href="https://kkintzios.com/politiki-aporritou/" target="_blank">πολιτική του ιστότοπου</a>.</div>
+
+    <div class="box">Ο βοηθός είναι σύστημα τεχνητής νοημοσύνης. Δεν είναι ο Κωνσταντίνος
+      Κιντζιός και δεν αντικαθιστά ιατρική, ψυχολογική, νομική ή οικονομική συμβουλή.</div>
+
+    <h2>Τι δεδομένα επεξεργαζόμαστε</h2>
+    <table>
+      <tr><th>Κατηγορία</th><th>Σκοπός</th><th>Νομική βάση</th><th>Διατήρηση</th></tr>
+      <tr><td>Ερωτήσεις που πληκτρολογείς</td><td>Παραγωγή απάντησης</td>
+          <td>Έννομο συμφέρον (άρ. 6.1.στ)</td><td>Μέχρι 10 ανταλλαγές ανά συνεδρία</td></tr>
+      <tr><td>Όνομα, email, τηλέφωνο, εταιρεία <i>(μόνο αν τα δώσεις σε αίτημα)</i></td>
+          <td>Επικοινωνία για το αίτημά σου</td><td>Συγκατάθεση (άρ. 6.1.α)</td>
+          <td>{{ retention_days }} ημέρες</td></tr>
+      <tr><td>Ερωτήσεις που δεν καλύφθηκαν</td><td>Βελτίωση περιεχομένου</td>
+          <td>Έννομο συμφέρον</td><td>Χωρίς στοιχεία ταυτοποίησης</td></tr>
+    </table>
+
+    <h2>Τι ΔΕΝ κάνουμε</h2>
+    <ul>
+      <li>Δεν πωλούμε και δεν μοιραζόμαστε τα στοιχεία σου με τρίτους για marketing.</li>
+      <li>Δεν χρησιμοποιούμε τις συνομιλίες σου για εκπαίδευση μοντέλων.</li>
+      <li>Δεν αποθηκεύουμε το πλήρες κείμενο της συνομιλίας μαζί με τα στοιχεία επικοινωνίας σου.</li>
+    </ul>
+
+    <h2>Τα δικαιώματά σου</h2>
+    <p>Πρόσβαση, διόρθωση, <b>διαγραφή</b>, περιορισμός, εναντίωση, φορητότητα, ανάκληση
+      συγκατάθεσης. Για άμεση διαγραφή των στοιχείων σου:</p>
+    <p><code>DELETE /api/leads/erase</code> με το email σου, ή στείλε μήνυμα στο
+      <a href="mailto:{{ org_email }}">{{ org_email }}</a>.</p>
+    <p>Καταγγελία: <a href="https://www.dpa.gr" target="_blank">Αρχή Προστασίας Δεδομένων
+      Προσωπικού Χαρακτήρα</a>. Ισχύουν ΓΚΠΔ (ΕΕ) 2016/679 και ν. 4624/2019.</p>
+
+    <h2>Διαφάνεια AI</h2>
+    <p>Σύμφωνα με το άρθρο 50 του Κανονισμού για την Τεχνητή Νοημοσύνη (ΕΕ) 2024/1689,
+      ενημερώνεσαι ότι αλληλεπιδράς με σύστημα AI. Οι απαντήσεις παράγονται από
+      δημοσιευμένο υλικό του Κωνσταντίνου Κιντζιού και συνοδεύονται από παραπομπές.</p>
+  </section>
+
+  <!-- ===== EN ===== -->
+  <section id="en" style="display:none">
+    <h1>Privacy Notice — AI Assistant</h1>
+    <div class="sub">Covers the digital assistant only. The website is governed by the
+      <a href="https://kkintzios.com/en/privacy-policy/" target="_blank">site policy</a>.</div>
+
+    <div class="box">The assistant is an AI system. It is not Konstantinos Kintzios and it
+      does not replace medical, psychological, legal or financial advice.</div>
+
+    <h2>What we process</h2>
+    <table>
+      <tr><th>Category</th><th>Purpose</th><th>Legal basis</th><th>Retention</th></tr>
+      <tr><td>Questions you type</td><td>Producing an answer</td>
+          <td>Legitimate interest (Art. 6.1.f)</td><td>Last 10 exchanges per session</td></tr>
+      <tr><td>Name, email, phone, company <i>(only if you submit an enquiry)</i></td>
+          <td>Contacting you about your request</td><td>Consent (Art. 6.1.a)</td>
+          <td>{{ retention_days }} days</td></tr>
+      <tr><td>Questions we couldn't answer</td><td>Improving the material</td>
+          <td>Legitimate interest</td><td>Stored without identifiers</td></tr>
+    </table>
+
+    <h2>What we do not do</h2>
+    <ul>
+      <li>We do not sell or share your details with third parties for marketing.</li>
+      <li>We do not use your conversations to train models.</li>
+      <li>We do not store full conversation transcripts alongside your contact details.</li>
+    </ul>
+
+    <h2>Your rights</h2>
+    <p>Access, rectification, <b>erasure</b>, restriction, objection, portability, withdrawal
+      of consent. To erase your details immediately:</p>
+    <p><code>DELETE /api/leads/erase</code> with your email, or write to
+      <a href="mailto:{{ org_email }}">{{ org_email }}</a>.</p>
+    <p>Complaints: <a href="https://www.dpa.gr" target="_blank">Hellenic Data Protection
+      Authority</a>. GDPR (EU) 2016/679 and Greek Law 4624/2019 apply.</p>
+
+    <h2>AI transparency</h2>
+    <p>Under Article 50 of the EU AI Act (Regulation (EU) 2024/1689, you are informed that
+      you are interacting with an AI system. Answers are generated from Konstantinos
+      Kintzios's published material and carry citations.</p>
+  </section>
+</div>
+<script>
+function setLang(l){
+  document.getElementById("el").style.display = l === "el" ? "" : "none";
+  document.getElementById("en").style.display = l === "en" ? "" : "none";
+  document.getElementById("b-el").className = l === "el" ? "on" : "";
+  document.getElementById("b-en").className = l === "en" ? "on" : "";
+  document.documentElement.lang = l;
+}
+if (!(navigator.language || "el").toLowerCase().startsWith("el")) setLang("en");
+</script>
+</body>
+</html>

@@ -13,3 +13,11 @@ test-results/
 data/pglite/
 data/pglite.*/
 data/pglite.*
+
+# python-assistant
+python-assistant/.venv/
+python-assistant/embeddings/
+python-assistant/**/__pycache__/
+python-assistant/.pytest_cache/
+python-assistant/*.db
+python-assistant/.env

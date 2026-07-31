@@ -1,0 +1,29 @@
+# Render deploy. Adapted from chios-forum-app/render.yaml.
+# Kintzios = 8020 (BPAN 8002, Chios 8010).
+services:
+  - type: web
+    name: kintzios-dialogosai
+    env: python
+    region: frankfurt          # EU data residency — leads are EU personal data
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: >
+      python manage.py ingest &&
+      uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHONPATH
+        value: /opt/render/project/src/src:/opt/render/project/src
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: INTERNAL_USER
+        sync: false
+      - key: INTERNAL_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://kkintzios.com,https://www.kkintzios.com
+      - key: LEAD_RETENTION_DAYS
+        value: "180"
+      - key: SCHEDULER_URL
+        sync: false
+      # ALLOW_INSECURE_ADMIN is deliberately absent. Unset -> admin returns 503.
