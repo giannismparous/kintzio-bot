@@ -41,6 +41,12 @@ const EXPLICIT_IDENTITY_PATTERNS = [
   /(?:είσαι|εισαι).{0,45}(?:τεχνητ(?:ή|η) νοημοσύνη|ai|bot|ρομπότ|robot|άνθρωπος|ανθρωπος|πραγματικός|πραγματικος)/i,
   /(?:είσαι|εισαι).{0,25}(?:ο αληθινός|ο αληθινος|όντως ο|οντως ο).{0,25}(?:κωνσταντίνος|κωνσταντινος|κίντζιος|κιντζιος)/i,
 ];
+const SELF_INTRODUCTION_PATTERNS = [
+  /^\s*(?:who are you|who're you|tell me who you are|tell me about yourself)\s*[?!.]*\s*$/i,
+  /^\s*(?:ποιος|ποια)\s+(?:είσαι|εισαι)\s*[;?!.]*\s*$/i,
+  /^\s*(?:poios|pios)\s+(?:eisai|iesai|ise)\s*[?!.]*\s*$/i,
+  /^\s*(?:συστήσου|συστησου|introduce yourself)\s*[;?!.]*\s*$/i,
+];
 const SERVICE_INTENT_PATTERN =
   /(υπηρεσ|προσφέρ|βοηθήσ|ipires|ypires|prosfer|voith|mentoring|coaching|consult|training|workshop|service|offer|how can you help|what can you do for)/i;
 const BOOKING_INTENT_PATTERN =
@@ -54,6 +60,10 @@ function looksLikePromptAttack(text) {
 
 function asksExplicitlyAboutIdentity(text) {
   return EXPLICIT_IDENTITY_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function asksForSelfIntroduction(text) {
+  return SELF_INTRODUCTION_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 function shouldOfferMeeting(text) {
@@ -96,6 +106,18 @@ export async function answerBotChat(botId, question, { history = [], language } 
           : 'I am the digital version of Konstantinos Kintzios, answering from his official content.',
       sources: [],
       confidence: 1,
+    };
+  }
+  if (asksForSelfIntroduction(q)) {
+    return {
+      answer:
+        replyLanguage === 'el'
+          ? 'Γεια σας, είμαι ο Κωνσταντίνος Κίντζιος. Είμαι επιχειρηματικός μέντορας, σύμβουλος και ομιλητής, και βοηθώ ανθρώπους και οργανισμούς να εξελίξουν την καριέρα, την ηγεσία και την εργασιακή τους κουλτούρα.'
+          : 'Hello, I’m Konstantinos Kintzios. I’m a business mentor, consultant, and public speaker, helping people and organizations develop their careers, leadership, and workplace culture.',
+      sources: [],
+      confidence: 1,
+      offerMeeting: false,
+      replyLanguage,
     };
   }
   if (looksLikePromptAttack(q)) {
