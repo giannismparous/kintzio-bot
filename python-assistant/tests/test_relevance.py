@@ -159,3 +159,48 @@ def test_safety_gates_still_precede_the_model(monkeypatch):
                                         "session_id": "sc2"}).json()["action"] == "distress"
         assert c.post("/api/ask", json={"question": "Πόσο κοστίζει μια ομιλία;",
                                         "session_id": "sc3"}).json()["action"] == "price"
+
+
+# --- a Greek question must get Greek context --------------------------------
+#
+# Regression for a two-part bug. The same-language ranking bonus was 0.05,
+# below the gap between adjacent TF-IDF scores, so it never changed the order.
+# Raising it to 0.35 alone did NOTHING, because each leg only fetched
+# top_k//2+2 candidates: on «Πες μου για το Gen Z» the lexical leg returned 2
+# Greek and 4 English out of 86 eligible Greek chunks, and a bonus cannot
+# promote a chunk that was never retrieved. The fix is both — a wider pool AND
+# a bonus that can reorder it.
+#
+# This matters beyond tidiness: the retrieved passages ARE the model's context,
+# so an English-heavy context on a Greek question drags the answer into English.
+
+@pytest.mark.parametrize("query,lang", [
+    ("Πες μου για το Gen Z", "el"),
+    ("πώς χτίζω κουλτούρα;", "el"),
+    ("τι κάνει έναν καλό ηγέτη;", "el"),
+    ("Tell me about Gen Z", "en"),
+    ("how do I build culture?", "en"),
+])
+def test_retrieval_prefers_the_question_s_language(indexer, query, lang):
+    from app.config import PERSONA_SPEAKER
+    from app.services.indexing import public_filter
+    hits = indexer.hybrid_search(
+        query, top_k=6, predicate=public_filter(PERSONA_SPEAKER), lang=lang)
+    assert hits, f"no retrieval at all for {query!r}"
+    same = [h for h in hits if h.get("lang") == lang]
+    assert len(same) / len(hits) >= 0.8, (
+        f"{query!r} returned {len(same)}/{len(hits)} in {lang} — "
+        "context language drifts, and the answer follows it")
+
+
+def test_language_bonus_is_a_preference_not_a_filter():
+    """Cross-language retrieval must stay POSSIBLE.
+
+    He says things in Greek that answer English questions. The bonus makes
+    same-language the default; a hard filter would lose real material.
+    """
+    import inspect
+    from app.services import indexing
+    src = inspect.getsource(indexing.HybridContentIndexer.hybrid_search)
+    assert "rank_score" in src and "LANG_BONUS" in src
+    assert 'item.get("lang") == lang' in src, "bonus must be additive, not a filter"

@@ -717,10 +717,35 @@ class HybridContentIndexer:
         expanded = self._expand_terms(query)
         if expanded != query:
             logger.info("Query expanded: %r -> %r", query, expanded)
-        tf = self.search_tfidf(expanded, top_k=top_k // 2 + 2, predicate=predicate)
-        fa = self.search_faiss(expanded, top_k=top_k // 2 + 2, predicate=predicate)
+        # Fetch a WIDER pool than we return, then rank it.
+        #
+        # Each leg used to fetch top_k//2+2 — for top_k=6 that is 5 candidates,
+        # and the language bonus below can only reorder what was fetched. On
+        # «Πες μου για το Gen Z» the lexical leg returned 2 Greek and 4 English
+        # candidates out of 86 eligible Greek chunks, so a Greek question got a
+        # mostly-English context no matter how large the bonus was. Raising the
+        # bonus without widening the pool did nothing, which is exactly what
+        # measuring it showed.
+        #
+        # 3x the final cut, floor 12: enough that same-language material is
+        # present to promote, small enough that the sort stays trivial.
+        pool = max(12, top_k * 3)
+        tf = self.search_tfidf(expanded, top_k=pool, predicate=predicate)
+        fa = self.search_faiss(expanded, top_k=pool, predicate=predicate)
 
-        LANG_BONUS = 0.05
+        # Same-language chunks win ties AND near-ties.
+        #
+        # Was 0.05, which is below the spread between adjacent TF-IDF scores on
+        # this corpus, so an English chunk routinely outranked a Greek one for a
+        # Greek question: «Πες μου για το Gen Z» returned 4 English chunks out
+        # of 6. The model then had mostly English context and drifted, which is
+        # exactly the failure the language directive exists to prevent —
+        # cheaper to fix in ranking than to fight in the prompt.
+        #
+        # Cross-language retrieval is still POSSIBLE (this is a bonus, not a
+        # filter) because he says things in one language that answer questions
+        # asked in the other. It just stops being the default.
+        LANG_BONUS = 0.35
         for item in tf + fa:
             item["rank_score"] = item["score"] + (
                 LANG_BONUS if lang and item.get("lang") == lang else 0.0

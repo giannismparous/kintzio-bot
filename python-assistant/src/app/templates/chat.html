@@ -17,19 +17,32 @@
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <style>
   :root{
-    --ink:#070f45; --ink-soft:#5b6470; --line:#e4e7eb; --bg:#fbfbfc;
+    --ink:#070f45; --ink-soft:#5b6470; --line:#e8eaf0; --bg:#fbfbfc;
     /* His own palette, lifted from kkintzios.com — not chosen by us. */
     --accent:#ff7d00;        /* the orange in his logo and CTAs */
     --accent-dark:#d96a00;   /* darkened for hover/AA text contrast */
+    --accent-wash:#fff4e8;
     --bubble-user:#070f45; --bubble-bot:#ffffff;
     --warn-bg:#fff8ec; --warn-line:#e8d5a8;
+    --shadow:0 1px 2px rgba(7,15,69,.04), 0 8px 24px -12px rgba(7,15,69,.14);
+    --shadow-lift:0 2px 4px rgba(7,15,69,.06), 0 16px 32px -16px rgba(7,15,69,.22);
   }
   *{box-sizing:border-box}
-  body{margin:0;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-       color:var(--ink);background:var(--bg)}
-  header{background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;position:sticky;top:0;z-index:5}
+  body{margin:0;font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       color:var(--ink);
+       /* Navy wash top-left, warm wash top-right: his two brand colours at
+          2-3% so the page reads as his without competing with the content. */
+       background:
+         radial-gradient(1100px 520px at 12% -8%, #eef1f8 0%, transparent 60%),
+         radial-gradient(900px 460px at 88% -12%, var(--accent-wash) 0%, transparent 62%),
+         var(--bg);
+       background-attachment:fixed;
+       -webkit-font-smoothing:antialiased}
+  header{background:rgba(255,255,255,.82);backdrop-filter:saturate(1.6) blur(14px);
+         -webkit-backdrop-filter:saturate(1.6) blur(14px);
+         border-bottom:1px solid var(--line);padding:13px 20px;position:sticky;top:0;z-index:5}
   .hwrap{max-width:820px;margin:0 auto;display:flex;align-items:center;gap:14px}
-  .hname{font-weight:700;letter-spacing:-.2px}
+  .hname{font-weight:700;letter-spacing:-.3px;font-size:16.5px}
   .hsub{color:var(--ink-soft);font-size:13px}
   .brand{display:flex;align-items:center;gap:11px}
   .avatar{border-radius:50%;flex:0 0 auto;display:block}
@@ -49,23 +62,34 @@
   main{max-width:820px;margin:0 auto;padding:22px 20px 140px}
   .msg{margin:16px 0;display:flex;gap:10px}
   .msg .who{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin-bottom:5px}
-  .bub{padding:13px 16px;border-radius:14px;max-width:88%}
-  .bot .bub{background:var(--bubble-bot);border:1px solid var(--line)}
+  .bub{padding:14px 17px;border-radius:16px;max-width:88%;
+       animation:rise .34s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+  .bot .bub{background:var(--bubble-bot);border:1px solid var(--line);
+            box-shadow:var(--shadow);border-top-left-radius:5px}
   .user{justify-content:flex-end}
-  .user .bub{background:var(--bubble-user);color:#fff}
+  .user .bub{background:var(--bubble-user);color:#fff;border-top-right-radius:5px;
+             box-shadow:0 10px 22px -14px rgba(7,15,69,.55)}
   .bub ul{margin:.5em 0;padding-left:1.15em}
   .bub sup a{text-decoration:none}
   .bub ol{font-size:13.5px;color:var(--ink-soft)}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 4px}
-  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 15px;
+        box-shadow:var(--shadow);transition:transform .16s cubic-bezier(.2,.7,.3,1),border-color .16s,box-shadow .16s;
         font-size:13.5px;cursor:pointer;color:var(--ink-soft)}
   .chip:hover{border-color:var(--accent);color:var(--accent-dark)}
 
-  footer{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:14px 20px}
+  /* Fade the page out under the composer instead of a hard border line. */
+  footer{position:fixed;bottom:0;left:0;right:0;padding:14px 20px 18px;
+         background:linear-gradient(to top,var(--bg) 62%,rgba(251,251,252,0));
+         border-top:0}
   .fwrap{max-width:820px;margin:0 auto;display:flex;gap:10px}
-  #q{flex:1;padding:13px 15px;border:1px solid var(--line);border-radius:11px;font:inherit;outline:none}
+  #q{flex:1;padding:14px 16px;border:1px solid var(--line);border-radius:13px;font:inherit;
+     outline:none;background:#fff;transition:border-color .16s,box-shadow .16s}
   #q:focus{border-color:var(--accent)}
-  #send{background:var(--ink);color:#fff;border:0;border-radius:11px;padding:0 22px;font-weight:600;cursor:pointer}
+  /* Send wears his orange: it is the call to action on his own page. */
+  #send{background:var(--accent);color:#fff;border:0;border-radius:13px;padding:0 24px;
+        font-weight:700;cursor:pointer;letter-spacing:.01em}
   #send:disabled{opacity:.45;cursor:default}
   .foot-note{max-width:820px;margin:8px auto 0;font-size:11.5px;color:var(--ink-soft);text-align:center}
   .dots span{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;
@@ -90,6 +114,51 @@
     border-radius:999px;display:table}
   .ground.ok{color:#0f6b3f;background:#e8f6ee}
   .ground.warn{color:#8a4b00;background:#fff1e0;font-weight:600}
+
+  /* Source provenance cards */
+  .srcs{max-width:820px;margin:2px auto 16px}
+  .srcs-h{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+    color:#8a919e;font-weight:700;margin:0 0 7px 2px}
+  .srcs-r{display:flex;flex-wrap:wrap;gap:8px}
+  .srcs-c{display:flex;align-items:center;gap:8px;text-decoration:none;
+    border:1px solid var(--line);background:#fff;border-radius:10px;
+    padding:7px 11px;font-size:12.5px;color:var(--ink);max-width:100%;
+    transition:border-color .15s,transform .15s}
+  a.srcs-c:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .srcs-n{font-size:10.5px;font-weight:700;color:var(--accent);
+    border:1.5px solid var(--accent);border-radius:50%;width:17px;height:17px;
+    display:grid;place-items:center;flex:none}
+  .srcs-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:290px}
+  .srcs-k{font-size:10px;color:#8a919e;background:#f2f3f5;border-radius:4px;padding:1px 5px}
+  .stage{color:var(--ink-soft);font-size:13.5px;animation:fade .4s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+
+  .chip:hover{transform:translateY(-2px);border-color:var(--accent);
+    box-shadow:var(--shadow-lift);color:var(--accent-dark)}
+
+  /* Composer: floating card rather than a bar welded to the viewport edge. */
+  .composer{background:rgba(255,255,255,.9);backdrop-filter:blur(14px) saturate(1.6);
+    -webkit-backdrop-filter:blur(14px) saturate(1.6);
+    border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lift)}
+  #q:focus{outline:none;border-color:var(--accent);
+    box-shadow:0 0 0 4px rgba(255,125,0,.13)}
+  #send{transition:transform .16s,box-shadow .16s,background .16s}
+  #send:hover:not(:disabled){transform:translateY(-1px);
+    box-shadow:0 8px 18px -8px rgba(255,125,0,.7)}
+  #send:disabled{opacity:.45;cursor:not-allowed}
+
+  /* Trace: the orange rail gets a soft glow so it reads as "live". */
+  .trace{box-shadow:0 1px 2px rgba(255,125,0,.06)}
+  .trace-n{box-shadow:0 2px 6px -2px rgba(255,125,0,.6)}
+
+  @media (max-width:640px){
+    .bub{max-width:94%}
+    main{padding:16px 14px 150px}
+    .srcs-t{max-width:180px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
 </style>
 </head>
 <body>
@@ -127,6 +196,7 @@ const I18N = {
     send: "Στείλε",
     foot: "Οι απαντήσεις προέρχονται από δημοσιευμένο υλικό. Δεν αντικαθιστούν ιατρική, νομική ή οικονομική συμβουλή.",
     welcome: "<p>Είμαι το <b>Κίτσι</b>, ο ψηφιακός βοηθός του Κωνσταντίνου Κιντζιού. Απαντώ <b>μόνο</b> από αυτά που έχει πει και γράψει ο ίδιος — και σου δείχνω πού.</p><p>Ρώτησέ με για ηγεσία, ομάδες, εργασιακή κουλτούρα, Gen Z, καριέρα. Ή πες μου τι πρόβλημα έχεις και θα σου βρω τον θεματικό πυλώνα που ταιριάζει.</p>",
+    stages: ["Σκέφτομαι…","Ψάχνω στο υλικό του…","Διασταυρώνω τις πηγές…","Γράφω την απάντηση…"],
     chips: ["Πώς διοικώ μια ομάδα με Gen Z;","Οι νέοι μας φεύγουν στον πρώτο χρόνο","Θέλω keynote για το συνέδριό μας","Ποιος είναι ο Κωνσταντίνος;"],
     name: "Κίτσι", you: "Εσύ", bot: "Κίτσι",
     err: "Κάτι πήγε λάθος. Δοκίμασε ξανά."
@@ -138,6 +208,7 @@ const I18N = {
     send: "Send",
     foot: "Answers come from published material. They do not replace medical, legal or financial advice.",
     welcome: "<p>I'm <b>Kitsi</b>, Konstantinos Kintzios's digital assistant. I answer <b>only</b> from what he has actually said and written — and I show you where.</p><p>Ask me about leadership, teams, workplace culture, Gen Z, careers. Or tell me your problem and I'll find the thematic pillar that fits.</p>",
+    stages: ["Thinking…","Searching his material…","Cross-checking sources…","Writing the answer…"],
     chips: ["How do I manage a Gen Z team?","Our graduates leave within a year","I want a keynote for our conference","Who is Konstantinos?"],
     name: "Kitsi", you: "You", bot: "Kitsi",
     err: "Something went wrong. Please try again."
@@ -243,6 +314,29 @@ function renderGrounding(g){
   document.getElementById("log").appendChild(el);
 }
 
+// --- Source cards ---------------------------------------------------------
+// The API deliberately ships titles and URLs but NOT chunk text (shipping the
+// text would make the corpus scrapeable one question at a time). So the cards
+// show provenance and link out; they are not a reading surface.
+function renderSources(sources){
+  if (!sources || !sources.length) return;
+  const wrap = document.createElement("div");
+  wrap.className = "srcs";
+  const hdr = LANG === "el" ? "Από πού το πήρε" : "Where this came from";
+  wrap.innerHTML = `<div class="srcs-h">${hdr}</div><div class="srcs-r">` +
+    sources.map((s,i) => {
+      const title = esc(s.title || s.url || "—");
+      const kind = esc(s.source_type || "");
+      const body = `<span class="srcs-n">${i+1}</span>
+          <span class="srcs-t">${title}</span>
+          ${kind ? `<span class="srcs-k">${kind}</span>` : ""}`;
+      return s.url
+        ? `<a class="srcs-c" href="${esc(s.url)}" target="_blank" rel="noopener">${body}</a>`
+        : `<div class="srcs-c">${body}</div>`;
+    }).join("") + "</div>";
+  document.getElementById("log").appendChild(wrap);
+}
+
 async function ask(){
   const inp = document.getElementById("q");
   const q = inp.value.trim();
@@ -251,18 +345,31 @@ async function ask(){
   document.querySelectorAll(".chips").forEach(e => e.remove());
   user(q);
   const btn = document.getElementById("send"); btn.disabled = true;
+  // Staged status instead of a bare spinner. The agent really does take a
+  // few seconds when it calls two tools, and naming the stage is both honest
+  // and the most interesting thing on screen.
   const pending = bot('<span class="dots"><span></span><span></span><span></span></span>');
+  const stages = I18N[LANG].stages;
+  let si = 0;
+  const ticker = setInterval(() => {
+    si = Math.min(si + 1, stages.length - 1);
+    const b = pending.querySelector(".bub");
+    if (b) b.innerHTML = `<span class="stage">${stages[si]}</span>`;
+  }, 1100);
   try{
     const res = await fetch("/api/ask", {
       method: "POST", headers: {"Content-Type":"application/json"},
       body: JSON.stringify({question: q, session_id: SESSION, lang: LANG})
     });
     const data = await res.json();
+    clearInterval(ticker);
     pending.remove();
     if (data.trace && data.trace.length) renderTrace(data.trace);
     bot(data.answer || I18N[LANG].err);
     if (data.grounding) renderGrounding(data.grounding);
+    renderSources(data.sources);
   }catch(e){
+    clearInterval(ticker);
     pending.remove();
     bot(I18N[LANG].err);
   }finally{

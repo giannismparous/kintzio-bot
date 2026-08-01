@@ -85,8 +85,10 @@ divergence check over same-topic chunks across time.
 
 ## 4. Corpus-gap report — what justifies the retainer
 
-Every unanswered question is already logged to `UnansweredQuestion`. **Nothing
-reads that table.**
+Every unanswered question is logged to `UnansweredQuestion`, and
+`routers/internal.py` already groups and counts them for the admin dashboard.
+**What is missing is not storage or display — it is delivery.** Nobody logs in
+to a dashboard weekly.
 
 Weekly or monthly email to him: *"31 people asked about succession planning. You
 have nothing published on it."*

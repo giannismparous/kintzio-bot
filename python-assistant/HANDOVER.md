@@ -12,7 +12,7 @@ pip install -r requirements.txt
 cp .env.example .env          # add GEMINI_API_KEY
 python manage.py ingest
 python manage.py serve        # http://localhost:8020
-python -m pytest              # 113 tests, no key or network needed
+python -m pytest              # 133 tests, no key or network needed
 ```
 
 ## Relationship to the existing bot

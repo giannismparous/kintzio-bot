@@ -445,6 +445,7 @@ class UniversalLLMManager:
         *,
         max_steps: int = 4,
         timeout: int = DEFAULT_TIMEOUT,
+        lang_directive: str = "",
     ):
         """Multi-step generation where the MODEL chooses which tools to call.
 
@@ -523,6 +524,20 @@ class UniversalLLMManager:
                 })
                 logger.info("Tool call: %s(%s)", fc.name, args)
                 replies.append({"function_response": {"name": fc.name, "response": payload}})
+
+            # Re-assert the response language AFTER the tool results.
+            #
+            # BPAN brackets the directive on both sides of the prompt because a
+            # long retrieved-context block dilutes a single instruction at the
+            # top. The tool loop breaks that: tool results are the LAST thing
+            # the model sees before it writes, and they arrive as raw corpus
+            # text. Measured on this index, a Greek question about Gen Z
+            # retrieves 4 English chunks out of 6 — so without this the model
+            # drifts into the corpus's language and a Greek visitor gets an
+            # English answer. The directive has to be the final token, every
+            # turn, not just at the start of the conversation.
+            if lang_directive:
+                replies.append({"text": lang_directive})
             message = replies
 
         logger.info("Tool loop hit max_steps=%d", max_steps)

@@ -37,7 +37,8 @@ from app.services import guardrails, tools
 from app.services.citations import apply_citations, format_history
 from app.services.grounding import check_quotes, redact_ungrounded
 from app.services.indexing import public_filter, searchable_filter
-from app.services.persona import OUT_OF_SCOPE_TOKEN, build_prompt, detect_lang
+from app.services.persona import (OUT_OF_SCOPE_TOKEN, build_prompt, detect_lang,
+                                  language_directive)
 
 logger = logging.getLogger(__name__)
 
@@ -261,7 +262,8 @@ async def ask(payload: AskRequest, request: Request, db: OrmSession = Depends(ge
             return payload, docs_
 
         raw, trace = await mgr.generate_with_tools(
-            prompt, tools.TOOL_SCHEMAS, _dispatch
+            prompt, tools.TOOL_SCHEMAS, _dispatch,
+            lang_directive=language_directive(lang),
         )
         answer = (raw or "").strip()
         if answer and tool_docs:

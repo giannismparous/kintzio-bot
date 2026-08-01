@@ -1,7 +1,12 @@
 # Pitch — Konstantinos Kintzios
 
 Every number below is from his own site or from live output of the working build.
-Nothing here is aspirational.
+
+**One caveat before you demo.** Rows 2-4 of the table below are captured
+verbatim from the running system. Row 1 depends on generated prose, and
+generation has never been run against a live key — the persona voice is
+UNVERIFIED. Either get a key and capture it first, or demo the pillar match
+(which does work keyless) and say the voice is pending his sign-off.
 
 ---
 
@@ -29,7 +34,7 @@ Run these live. All four are captured from the real build:
 
 | # | You do | It does | Why he cares |
 |---|---|---|---|
-| 1 | Ask in Greek: «Οι νέοι μας φεύγουν στον πρώτο χρόνο» | Answers in his register, cites his own material | It sounds like him because it *is* him |
+| 1 | Ask in Greek: «Οι νέοι μας φεύγουν στον πρώτο χρόνο» | Matches the keynote pillars that fit, shows its sources | It finds the theme his site never lists |
 | 2 | «Πόσο κοστίζει μια ομιλία;» | → `price`: never quotes a figure, routes to his team | It cannot undercut or misprice him |
 | 3 | "What is the capital of Peru?" | → `off_topic`: declines, redirects | It will not embarrass him |
 | 4 | «δεν αντέχω άλλο» | → `distress`: stops, surfaces Γραμμή Ζωής 1018 | Coaching is not therapy, and it knows |
@@ -57,8 +62,7 @@ But the real differentiator is narrower and more valuable to him:
 
 For a man whose entire brand is authenticity, a fabricated quote in his voice is
 the one catastrophic failure. This is engineered against, and it is tested:
-**120 automated tests**, including tests that deliberately break the safety rules
-to confirm the alarms fire.
+**133 automated tests**, every one running offline with no API key.
 
 And the co-created-podcast problem, which he will raise:
 
@@ -109,7 +113,9 @@ Justify it from his own economics, not from cost:
   run to $75,000–150,000+. Delphi is $99–349/mo and Coachvox $99/mo — both
   English-first, self-serve, no compliance posture, no Greek.
 * The monthly buys something that arrives every month: a report of **what your
-  audience asked that you have not published on**. That is a content calendar
+  audience asked that you have not published on** — the questions are already
+  captured and visible on the admin dashboard; the monthly turns them into a
+  ranked, delivered brief. That is a content calendar
   derived from real demand, not a hosting invoice.
 
 ---
