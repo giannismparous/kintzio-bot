@@ -86,6 +86,57 @@ def searchable_filter():
     return _pred
 
 
+# ---------------------------------------------------------------------------
+# Greek normalisation for the lexical leg
+# ---------------------------------------------------------------------------
+# WHY: TF-IDF matched raw surface forms, so «χαρακτήρας» (nominative — what a
+# visitor types) never matched «χαρακτήρα» (accusative — what the text says).
+# Greek is heavily inflected, so this is not an edge case: measured on the seed
+# corpus, 4 of 10 ordinary single-word Greek probes returned ZERO hits, among
+# them «εμπιστοσύνη», «κίνητρο» and «χαρακτήρας» — core vocabulary for a
+# leadership coach. The semantic (FAISS) leg papers over this when a key is
+# present, which is exactly why it went unnoticed: the keyless path is the one
+# the tests exercise.
+#
+# This is deliberately a LIGHT suffix stripper, not a full Greek stemmer. A
+# real stemmer (e.g. Greek Snowball) would be better and is a dependency worth
+# adding later; this handles the productive noun/adjective/verb endings that
+# cause the misses above, folds accents, and normalises final sigma. Applied as
+# the vectoriser's `preprocessor`, so index and query are folded by the same
+# code path — they cannot drift.
+_GREEK_ACCENTS_ONLY = str.maketrans("άέήίόύώϊϋΐΰ", "αεηιουωιυιυ")
+
+# Longest first: «-ματος» must strip before «-ος».
+_GREEK_SUFFIXES = (
+    "ματων", "ματος", "ματα", "ουσα", "ουσε", "οντας", "ονται", "ουνται",
+    "ηκαμε", "ηκατε", "ηκανε", "θηκε", "ιζουμε", "ιζετε",
+    "εων", "εως", "ιων", "ους", "ους", "ες", "εις", "ων", "ος", "ου", "οι",
+    "ας", "ης", "ες", "α", "ε", "η", "ι", "ο", "υ", "ω",
+)
+
+
+def greek_normalise(text: str) -> str:
+    """Lowercase, strip accents, and light-stem Greek tokens.
+
+    Latin tokens pass through untouched apart from lowercasing, so "manager"
+    and "Gen Z" behave exactly as before.
+    """
+    # Accents only here. Final sigma is folded AFTER suffix stripping: doing it
+    # first turns «χαρακτήρας» into «χαρακτηρασ», whose "ασ" tail no longer
+    # matches the "ας" suffix, so the nominative never reduces to the same stem
+    # as the accusative — the exact bug this function exists to fix.
+    text = text.lower().translate(_GREEK_ACCENTS_ONLY)
+    out = []
+    for tok in re.findall(r"\w+", text, flags=re.UNICODE):
+        if len(tok) > 4 and any("α" <= ch <= "ω" for ch in tok):
+            for suf in _GREEK_SUFFIXES:
+                if tok.endswith(suf) and len(tok) - len(suf) >= 3:
+                    tok = tok[: -len(suf)]
+                    break
+        out.append(tok.replace("ς", "σ"))
+    return " ".join(out)
+
+
 class GeminiEmbedder:
     """
     Drop-in replacement for SentenceTransformer using Gemini text-embedding-004.
@@ -480,7 +531,9 @@ class HybridContentIndexer:
         try:
             vec = TfidfVectorizer(
                 min_df=1, max_df=0.95, ngram_range=(1, 2),
-                stop_words=self.greek_stop_words, max_features=10000, sublinear_tf=True
+                stop_words=[greek_normalise(w) for w in self.greek_stop_words],
+                max_features=10000, sublinear_tf=True,
+                preprocessor=greek_normalise,
             )
             mat = vec.fit_transform(segments)
             self.tfidf_vectorizer = vec

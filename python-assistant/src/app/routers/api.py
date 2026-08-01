@@ -22,6 +22,7 @@ citation rendering would have to parse its own output.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from datetime import datetime
 
@@ -29,14 +30,14 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as OrmSession
 
-from app.config import DEFAULT_LANG, PERSONA_SPEAKER, scheduler_line
+from app.config import AGENT_ENABLED, DEFAULT_LANG, PERSONA_SPEAKER, scheduler_line
 from app.db import get_db
 from app.models import UnansweredQuestion, UserSession
-from app.services import guardrails
+from app.services import guardrails, tools
 from app.services.citations import apply_citations, format_history
 from app.services.grounding import check_quotes, redact_ungrounded
 from app.services.indexing import public_filter, searchable_filter
-from app.services.persona import build_prompt, detect_lang
+from app.services.persona import OUT_OF_SCOPE_TOKEN, build_prompt, detect_lang
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,9 @@ class AskResponse(BaseModel):
     sources: list[dict] = []
     disclosed: bool = False
     grounding: dict | None = None
+    # Which tools the model chose to call. Surfaced to the UI so a visitor sees
+    # the work rather than a spinner; empty on the single-shot fallback path.
+    trace: list[dict] = []
 
 
 def _get_indexer(request: Request):
@@ -169,14 +173,21 @@ async def ask(payload: AskRequest, request: Request, db: OrmSession = Depends(ge
 
     top_score = max((d.get("score", 0.0) for d in docs), default=0.0)
 
-    # Off-topic gate. Retrieval score alone cannot decide this: on the seed
-    # corpus an off-topic question ("capital of Peru") still scores ~0.10 against
-    # a real one at ~0.19, because TF-IDF matches stopwords and shared function
-    # words. So the decision needs BOTH signals — no topical vocabulary AND weak
-    # retrieval. Either signal alone is insufficient:
-    #   * strong retrieval without vocabulary = a rephrased on-topic question
-    #   * vocabulary without retrieval = in scope but not covered → no_answer
-    if not verdict.get("topical", True) and top_score < STRONG_RELEVANCE:
+    # Off-topic gate — KEYLESS FALLBACK ONLY.
+    #
+    # When a model is available, scope is the MODEL's judgement (see
+    # persona.scope_instruction and the [OUT_OF_SCOPE] handling after
+    # generation). The keyword list here refused "how to lead?" while answering
+    # "how do I lead a team?" — the shortest, most central question in his whole
+    # domain was the one it got wrong. A vocabulary list can never cover a
+    # domain; every gap is a refusal in his name.
+    #
+    # It survives only for the keyless path, where there is no judgement
+    # available and a crude filter beats none. Both signals are still required
+    # (no topical vocabulary AND weak retrieval) so it stays conservative.
+    from app.startup import get_llm_manager as _peek_mgr
+    _keyless = _peek_mgr() is None
+    if _keyless and not verdict.get("topical", True) and top_score < STRONG_RELEVANCE:
         session.intent = "off_topic"
         db.commit()
         logger.info("Off-topic: %r (top=%.3f)", question[:60], top_score)
@@ -233,8 +244,53 @@ async def ask(payload: AskRequest, request: Request, db: OrmSession = Depends(ge
             sources=_public_sources(docs), disclosed=disclosed_now,
         )
 
-    raw = await mgr.generate_with_multi_fallback(prompt)
-    answer = (raw or "").strip()
+    # Agentic pass: the model picks the tools. `docs` starts as the pre-fetched
+    # retrieval above and is REPLACED by whatever the model's own tool calls
+    # returned, so citations and quote verification run against the passages it
+    # actually saw — not against a set fetched before it decided what to look
+    # for. If the loop returns nothing (budget, dead models, no text) we fall
+    # back to the single-shot path rather than failing the request.
+    trace: list[dict] = []
+    answer = ""
+    if AGENT_ENABLED:
+        tool_docs: list = []
+
+        def _dispatch(name: str, args: dict):
+            payload, docs_ = tools.dispatch(name, args, indexer=indexer, lang=lang)
+            tool_docs.extend(docs_)
+            return payload, docs_
+
+        raw, trace = await mgr.generate_with_tools(
+            prompt, tools.TOOL_SCHEMAS, _dispatch
+        )
+        answer = (raw or "").strip()
+        if answer and tool_docs:
+            seen, merged = set(), []
+            for d in tool_docs:
+                k = (d.get("content") or "")[:100]
+                if k and k not in seen:
+                    seen.add(k)
+                    merged.append(d)
+            docs = merged
+
+    if not answer:
+        raw = await mgr.generate_with_multi_fallback(prompt)
+        answer = (raw or "").strip()
+
+    # The model judged the question out of his domain. Checked on a stripped,
+    # case-folded prefix because a model that emits the sentinel sometimes wraps
+    # it in a <p> or adds a trailing period.
+    if OUT_OF_SCOPE_TOKEN.lower() in re.sub(r"<[^>]+>", "", answer).lower()[:120]:
+        session.intent = "off_topic"
+        db.commit()
+        logger.info("Model judged off-topic: %r", question[:60])
+        body, disclosed_now = _disclose(session, guardrails.off_topic_response(lang), lang)
+        db.commit()
+        return AskResponse(
+            answer=body, lang=lang, action="off_topic",
+            sources=[], disclosed=disclosed_now,
+        )
+
     if not answer:
         body, disclosed_now = _disclose(session, guardrails.no_answer_response(lang), lang)
         db.commit()
@@ -264,6 +320,7 @@ async def ask(payload: AskRequest, request: Request, db: OrmSession = Depends(ge
         sources=_public_sources(docs), disclosed=disclosed_now,
         grounding={"checked": report["checked"], "grounded": report["grounded"],
                    "removed": len(report["ungrounded"])},
+        trace=trace,
     )
 
 

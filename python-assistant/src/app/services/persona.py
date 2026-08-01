@@ -148,5 +148,66 @@ def build_prompt(question: str, docs: list[dict], lang: str, history: str = "") 
     blocks = [directive, persona, f"{facts_hdr}\n{ORG_FACTS}"]
     if history:
         blocks.append(f"{h_hdr}\n{history}")
-    blocks += [format_sources(docs, lang), f"{q_hdr}\n{question}", directive]
+    blocks += [
+        format_sources(docs, lang),
+        f"{q_hdr}\n{question}",
+        scope_instruction(lang),
+        directive,
+    ]
     return "\n\n".join(blocks)
+
+
+# Scope is a JUDGEMENT, not a keyword match.
+#
+# This replaced a regex vocabulary list that refused "how to lead?" while
+# answering "how do I lead a team?" — the shortest and most central question a
+# leadership coach can be asked was the one it got wrong, because `\blead\b`
+# happened not to fire on it. Enumerating the vocabulary of an entire domain in
+# a pattern list is a losing game: the list is always missing the phrasing a
+# real person just used, and every miss is a refusal in his name.
+#
+# The model reads the question and the retrieved sources and decides. It is
+# told to lean IN: his domain is broad and adjacent questions (motivation,
+# hiring, feedback, burnout, career change) are his territory, not edge cases.
+# Only a genuinely unrelated question gets the sentinel.
+#
+# What stays deterministic, and why:
+#   * distress   — must work when the model is down, and a missed distress
+#                  signal is the worst failure this app has
+#   * price      — a fabricated number becomes an anchor he argues down later
+#   * rights     — retrieval filtering is a legal boundary, not a judgement
+# Those three are safety and commercial invariants. Topic is neither.
+_SCOPE_EL = """=== ΚΡΙΣΗ ΣΥΝΑΦΕΙΑΣ ===
+Πριν απαντήσεις, κρίνε αν η ερώτηση αφορά τον τομέα του Κωνσταντίνου:
+ηγεσία, διοίκηση ανθρώπων, ομάδες, εταιρική κουλτούρα, καριέρα, Gen Z και
+πολυγενεακές ομάδες, δημόσιος λόγος, προσωπική εξέλιξη στη δουλειά.
+
+Να είσαι ΓΕΝΝΑΙΟΔΩΡΟΣ. Ο τομέας του είναι ευρύς. Ερωτήσεις για κίνητρα,
+προσλήψεις, feedback, εξουθένωση, αλλαγή καριέρας, συγκρούσεις, εμπιστοσύνη
+ή χαρακτήρα ΕΙΝΑΙ μέσα στον τομέα. Μια σύντομη ή γενική ερώτηση («πώς να
+ηγηθώ;») είναι απολύτως μέσα στον τομέα — απάντησέ την.
+
+ΜΟΝΟ αν η ερώτηση είναι πραγματικά άσχετη (καιρός, αθλητικά, μαγειρική,
+γεωγραφία, κώδικας, γενικές γνώσεις), απάντησε ΑΚΡΙΒΩΣ με τη λέξη:
+[OUT_OF_SCOPE]
+και τίποτε άλλο."""
+
+_SCOPE_EN = """=== RELEVANCE JUDGEMENT ===
+Before answering, judge whether the question falls in Konstantinos's domain:
+leadership, people management, teams, workplace culture, careers, Gen Z and
+multigenerational teams, public speaking, professional growth.
+
+Be GENEROUS. His domain is broad. Questions about motivation, hiring,
+feedback, burnout, career change, conflict, trust or character ARE in scope.
+A short or general question ("how to lead?") is squarely in scope — answer it.
+
+ONLY if the question is genuinely unrelated (weather, sports, cooking,
+geography, code, general knowledge) reply with EXACTLY the token:
+[OUT_OF_SCOPE]
+and nothing else."""
+
+OUT_OF_SCOPE_TOKEN = "[OUT_OF_SCOPE]"
+
+
+def scope_instruction(lang: str) -> str:
+    return _SCOPE_EL if lang == "el" else _SCOPE_EN

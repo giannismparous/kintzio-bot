@@ -211,3 +211,13 @@ def scheduler_line(lang: str = "el") -> str:
 
 METRICS_DEFAULT = {"questions": 0, "refusals": 0, "leads": 0, "no_retrieval": 0}
 APP_HEALTH_DEFAULT = {"status": "starting", "indexed_chunks": 0}
+
+# --- Agentic tool loop -----------------------------------------------------
+# When on, the model chooses which tools to call (search_corpus, match_pillars,
+# start_lead_flow) instead of the router deciding with if-statements. Falls back
+# to single-shot generation automatically when the loop returns nothing, so
+# turning this off is a rollback switch rather than a feature removal.
+#
+# Distress, price deflection and the rights filter stay OUTSIDE the loop in
+# both modes — see services/tools.py for why.
+AGENT_ENABLED = os.environ.get("AGENT_ENABLED", "1") not in ("0", "false", "no")

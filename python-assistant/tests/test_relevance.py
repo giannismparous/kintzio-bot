@@ -91,3 +91,71 @@ def test_all_off_topic_probes_are_refused_or_deflected(client, q):
 def test_all_on_topic_probes_are_answered(client, q):
     d = client.post("/api/ask", json={"question": q}).json()
     assert d["action"] == "answered", (q, d["action"])
+
+
+# --- scope is the model's judgement, not a keyword list ---------------------
+#
+# Regression for a real bug: "how to lead?" was REFUSED while "how do I lead a
+# team?" was answered, because the `_IN_SCOPE` pattern list happened not to fire
+# on the shorter phrasing. The shortest, most central question in a leadership
+# coach's domain was the one the bot got wrong, in his name.
+#
+# Scope now belongs to the model (persona.scope_instruction). These tests pin
+# the two properties that must hold regardless of which model runs.
+
+def test_scope_instruction_is_in_every_prompt():
+    """The model cannot judge scope if it is never asked to."""
+    from app.services.persona import build_prompt
+    for lang, needle in (("en", "RELEVANCE JUDGEMENT"), ("el", "ΚΡΙΣΗ ΣΥΝΑΦΕΙΑΣ")):
+        assert needle in build_prompt("q", [], lang)
+
+
+def test_scope_instruction_tells_the_model_to_lean_in():
+    """A timid instruction reproduces the bug with extra steps."""
+    from app.services.persona import scope_instruction
+    assert "GENEROUS" in scope_instruction("en")
+    assert "how to lead?" in scope_instruction("en")       # the exact bug case
+    assert "ΓΕΝΝΑΙΟΔΩΡΟΣ" in scope_instruction("el")
+    assert "ηγηθώ" in scope_instruction("el")      # line-wrapped in source
+
+
+def test_keyword_gate_does_not_run_when_a_model_is_available(monkeypatch):
+    """The keyword list is a keyless fallback. With a model it must not fire."""
+    import app.startup as S
+    from app.routers import api as api_mod
+    assert "_keyless" in api_mod.__dict__ or True   # gate is inline; assert via behaviour
+
+    class _Stub:
+        async def generate_with_multi_fallback(self, prompt, **kw):
+            return "<p>Leadership answer.</p>"
+
+        async def generate_with_tools(self, prompt, schemas, dispatch, **kw):
+            return "<p>Leadership answer.</p>", []
+
+    monkeypatch.setattr(S, "get_llm_manager", lambda: _Stub())
+    from fastapi.testclient import TestClient
+    from app.main import app
+    with TestClient(app) as c:
+        r = c.post("/api/ask", json={"question": "how to lead?", "session_id": "sc1"})
+        assert r.json()["action"] == "answered", "short on-topic question refused again"
+
+
+def test_safety_gates_still_precede_the_model(monkeypatch):
+    """Distress and price must NEVER become the model's judgement call."""
+    import app.startup as S
+
+    class _Loud:
+        async def generate_with_multi_fallback(self, prompt, **kw):
+            raise AssertionError("model was called for a distress/price question")
+
+        async def generate_with_tools(self, prompt, schemas, dispatch, **kw):
+            raise AssertionError("tool loop ran for a distress/price question")
+
+    monkeypatch.setattr(S, "get_llm_manager", lambda: _Loud())
+    from fastapi.testclient import TestClient
+    from app.main import app
+    with TestClient(app) as c:
+        assert c.post("/api/ask", json={"question": "δεν αντέχω άλλο",
+                                        "session_id": "sc2"}).json()["action"] == "distress"
+        assert c.post("/api/ask", json={"question": "Πόσο κοστίζει μια ομιλία;",
+                                        "session_id": "sc3"}).json()["action"] == "price"

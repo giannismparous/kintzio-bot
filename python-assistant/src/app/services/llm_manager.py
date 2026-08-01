@@ -433,3 +433,104 @@ class UniversalLLMManager:
             "Η υπηρεσία δεν απάντησε αυτή τη στιγμή. Δοκίμασε ξανά σε λίγο."
         )
         logger.error("LLM generation failed after all fallbacks: %s", last_error)
+
+    # ----------------------------------------------------------------------
+    # Agentic loop
+    # ----------------------------------------------------------------------
+    async def generate_with_tools(
+        self,
+        prompt: str,
+        tool_schemas: list,
+        dispatch,
+        *,
+        max_steps: int = 4,
+        timeout: int = DEFAULT_TIMEOUT,
+    ):
+        """Multi-step generation where the MODEL chooses which tools to call.
+
+        Returns (text, trace) where `trace` is the list of
+        {tool, args, result_summary} steps actually taken — the router threads
+        it to the UI so a visitor can see the reasoning rather than a spinner.
+
+        Resilience: this walks the SAME (key, model) ladder as
+        generate_with_multi_fallback via _first_live_combo(), so a retired model
+        is skipped here too. It does NOT re-run the panic pass — a tool loop
+        that has already made two calls should fail fast rather than restart.
+
+        Budget: `max_steps` caps tool calls, and the total-deadline logic still
+        applies per underlying call. A model that loops calling search_corpus
+        forever is a real failure mode, so the cap is hard, not advisory.
+        """
+        if genai is None or not self.gemini_keys:
+            return "", []
+
+        combo = self._first_live_combo()
+        if combo is None:
+            return "", []
+        key_idx, model_name = combo
+        genai.configure(api_key=self.gemini_keys[key_idx])
+
+        tools = [{"function_declarations": tool_schemas}]
+        model = genai.GenerativeModel(
+            model_name,
+            generation_config=GEN_CFG,
+            safety_settings=SAFETY_DEFAULT,
+            tools=tools,
+        )
+        chat = model.start_chat()
+        trace: list[dict] = []
+        loop = asyncio.get_event_loop()
+        message = prompt
+
+        for step in range(max_steps):
+            try:
+                resp = await asyncio.wait_for(
+                    loop.run_in_executor(None, lambda m=message: chat.send_message(m)),
+                    timeout=timeout,
+                )
+            except Exception as e:
+                logger.warning("Tool loop step %d failed: %s", step, e)
+                if _is_permanent(e):
+                    self._dead_models.add(model_name)
+                return "", trace
+
+            calls = []
+            for cand in (resp.candidates or []):
+                for part in (cand.content.parts or []):
+                    fc = getattr(part, "function_call", None)
+                    if fc and fc.name:
+                        calls.append(fc)
+
+            if not calls:
+                text = ""
+                try:
+                    text = (resp.text or "").strip()
+                except Exception:
+                    pass
+                return text, trace
+
+            # Run every tool the model asked for this turn, then hand all the
+            # results back at once. Sequential single-tool turns would cost an
+            # extra round trip per tool for no benefit.
+            replies = []
+            for fc in calls:
+                args = {k: v for k, v in (fc.args or {}).items()}
+                payload, docs = dispatch(fc.name, args)
+                trace.append({
+                    "tool": fc.name,
+                    "args": args,
+                    "n_results": len(payload.get("passages", payload.get("pillars", []) or [])),
+                })
+                logger.info("Tool call: %s(%s)", fc.name, args)
+                replies.append({"function_response": {"name": fc.name, "response": payload}})
+            message = replies
+
+        logger.info("Tool loop hit max_steps=%d", max_steps)
+        return "", trace
+
+    def _first_live_combo(self):
+        """First (key, model) pair not known to be dead. None if all are."""
+        for key_idx, model_name in self._get_ordered_combos():
+            if model_name not in self._dead_models:
+                return key_idx, model_name
+        return None
